@@ -1,6 +1,8 @@
-from twisted.internet import reactor, endpoints, protocol
-from twisted.web import server, resource
+import pickle
 import random
+
+from twisted.internet import reactor, endpoints, protocol
+
 from generator_of_password import password_generator
 
 DISPATCHER_IP = 'http://127.0.0.1'
@@ -21,8 +23,8 @@ class Dispatcher(protocol.Protocol):
         result_dict['server'], port = self.__generate_available_address()
         result_dict['key'] = str(next(password_generator(LENGTH_OF_PASSWORD)))
         result_dict['ts'] = '0'
-        endpoints.serverFromString(reactor, "tcp:" + str(port)).listen(DispatcherFactory())     # todo: Заменить на long poll port
-        self.transport.write(str(result_dict).encode("ascii"))
+        endpoints.serverFromString(reactor, "tcp:" + str(port)).listen(LongPollConnectionFactory())
+        self.transport.write(pickle.dumps(result_dict))
 
     def __generate_available_address(self):
         port = random.randint(DISPATCHER_PORT+1, LAST_PORT)
@@ -37,6 +39,19 @@ class DispatcherFactory(protocol.Factory):
     # todo: сделать синглетоном
     def buildProtocol(self, addr):
         return Dispatcher()
+
+
+class LongPollConnection(protocol.Protocol):
+    def dataReceived(self, data):
+        result_dict = dict()
+        result_dict['Goood'] = 'Luck'
+        self.transport.write(pickle.dumps(result_dict))
+
+
+class LongPollConnectionFactory(protocol.Factory):
+    def buildProtocol(self, addr):
+        return LongPollConnection()
+
 
 endpoints.serverFromString(reactor, "tcp:"+str(DISPATCHER_PORT)).listen(DispatcherFactory())
 reactor.run()
