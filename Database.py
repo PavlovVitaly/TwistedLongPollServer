@@ -1,14 +1,13 @@
 from twisted.enterprise import adbapi
 
-SERVER = 'SERVER'
-SERVER_PASSWORD = 'qwerty'
-
 
 class UsersDatabase(object):
     def __init__(self):
+        self.__SERVER = 'SERVER'
+        self.__SERVER_PASSWORD = 'qwerty'
         self.dbpool = adbapi.ConnectionPool("sqlite3", "users.db", check_same_thread=False)
         self.__create_db_tables()
-        self.insert_client(SERVER, SERVER_PASSWORD)
+        self.insert_client(self.SERVER, self.SERVER_PASSWORD)
 
     def __create_db_tables(self):
         self.dbpool.runQuery("CREATE TABLE IF NOT EXISTS clients (id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -48,9 +47,9 @@ class UsersDatabase(object):
     def get_client_events(self, login, ts):
         return self.dbpool.runQuery("SELECT e.ts, e.event_description "
                                     "FROM clients AS c LEFT OUTER JOIN events_log AS e ON c.id = e.client_events"
-                                    "WHERE c.login = ? and e.ts > ?"
+                                    "WHERE (c.login = ? OR c.login = ?) and e.ts > ?"
                                     "ORDER BY e.ts",
-                                    (login, ts))
+                                    (login, self.SERVER, ts))
 
     def finish(self):
         self.dbpool.close()
