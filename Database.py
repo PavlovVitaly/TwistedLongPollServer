@@ -13,7 +13,7 @@ class UsersDatabase(object):
     def __create_db_tables(self):
         self.dbpool.runQuery("CREATE TABLE IF NOT EXISTS clients (id INTEGER PRIMARY KEY AUTOINCREMENT,"
                              "login TEXT NOT NULL, "
-                             "password TEXT NOT NULL")
+                             "password TEXT NOT NULL)")
         self.dbpool.runQuery("CREATE TABLE IF NOT EXISTS events_log (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                              "ts DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
                              "event_description TEXT NOT NULL, "
@@ -26,24 +26,31 @@ class UsersDatabase(object):
             return True
         return False
 
-    # todo: insert_event isn't done.
-    def insert_event(self, login, event):
+    def insert_event(self, login, ts, event):
         if self.__is_existed_login(login):
-            self.dbpool.runQuery("INSERT INTO events_log (event_description) VALUES(?)", (login, event))
-            return True
-        return False
+            self.dbpool.runQuery("INSERT INTO events_log (ts, event_description, client_events) "
+                                 "VALUES(?, ?, (SELECT id FROM clients WHERE login = ?))", (event, ts, login))
 
     def __is_existed_login(self, login):
         return self.dbpool.runQuery("SELECT login FROM clients WHERE login = ?", (login,))
+
+    def _insert_events(self, transaction, ts_event_login):
+        for ts, event, login in ts_event_login:
+            transaction.execute("INSERT INTO events_log (ts, event_description, client_events) "
+                                "VALUES(?, ?, (SELECT id FROM clients WHERE login = ?))", (event, ts, login))
+
+    def insert_events(self, ts_event_login):
+        return self.dbpool.runInteraction(self._insert_events, ts_event_login)
 
     def get_password(self, login):
         return self.dbpool.runQuery("SELECT password FROM clients WHERE login = ?", (login,))
 
     def get_client_events(self, login, ts):
         return self.dbpool.runQuery("SELECT e.ts, e.event_description "
-                                    "FROM clients AS c LEFT OUTER JOIN events_log AS e ON c.client_events = e.id"
-                                    "WHERE c.login = ? and e.ts > ?",
+                                    "FROM clients AS c LEFT OUTER JOIN events_log AS e ON c.id = e.client_events"
+                                    "WHERE c.login = ? and e.ts > ?"
+                                    "ORDER BY e.ts",
                                     (login, ts))
 
-    def close(self):
+    def finish(self):
         self.dbpool.close()
