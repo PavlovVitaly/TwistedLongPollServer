@@ -1,6 +1,7 @@
+from twisted.cred import checkers, portal
 from twisted.internet import reactor, endpoints
 
-from Dispatcher import DispatcherFactory
+from Dispatcher import DispatcherFactory, Realm
 
 DISPATCHER_IP = 'http://127.0.0.1'
 DISPATCHER_PORT = 8000
@@ -10,5 +11,10 @@ LAST_PORT = 65000
 
 LENGTH_OF_PASSWORD = 15
 
-endpoints.serverFromString(reactor, "tcp:"+str(DISPATCHER_PORT)).listen(DispatcherFactory())
+realm = Realm()
+myPortal = portal.Portal(realm)
+checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+checker.addUser("user", "pass")
+myPortal.registerChecker(checker)
+endpoints.serverFromString(reactor, "tcp:" + str(DISPATCHER_PORT)).listen(DispatcherFactory(myPortal))
 reactor.run()
