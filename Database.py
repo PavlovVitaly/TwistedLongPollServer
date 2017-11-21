@@ -11,11 +11,16 @@ class UsersDatabase(object):
         self.__SERVER_PASSWORD = 'qwerty'
         self.__db_type = db_type
         self.__name_db = name_db
-        self.dbpool = adbapi.ConnectionPool(self.__db_type, self.__name_db, check_same_thread=False)
-        self.__create_tables().addCallback(lambda x: self.insert_clients(((self.__SERVER, self.__SERVER_PASSWORD),)))
+        self.__dbpool = adbapi.ConnectionPool(self.__db_type, self.__name_db, check_same_thread=False)
+        # todo: addErrback
+        # self.__create_tables().addCallback(lambda x: self.insert_clients(((self.__SERVER, self.__SERVER_PASSWORD),)))
+
+    @property
+    def database_pool(self):
+        return self.__dbpool
 
     def __create_tables(self):
-        return self.dbpool.runInteraction(self.__create_db_tables)
+        return self.__dbpool.runInteraction(self.__create_db_tables)
 
     def __create_db_tables(self, transaction):
         transaction.execute("CREATE TABLE IF NOT EXISTS clients (id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -29,7 +34,7 @@ class UsersDatabase(object):
                             "FOREIGN KEY(client_events) REFERENCES clients(id))")
 
     def insert_clients(self, login_password):
-        return self.dbpool.runInteraction(self.__insert_clients, login_password)
+        return self.__dbpool.runInteraction(self.__insert_clients, login_password)
 
     def __insert_clients(self, transaction, login_password):
         for login, password in login_password:
@@ -37,11 +42,11 @@ class UsersDatabase(object):
 
     def insert_event(self, login, ts, event):
         if self.__get_client_id(login):
-            self.dbpool.runQuery("INSERT INTO events_log (ts, event_description, client_events) "
-                                 "VALUES(?, ?, (SELECT id FROM clients WHERE login = ?))", (event, ts, login))
+            self.__dbpool.runQuery("INSERT INTO events_log (ts, event_description, client_events) "
+                                   "VALUES(?, ?, (SELECT id FROM clients WHERE login = ?))", (event, ts, login))
 
     def insert_events(self, ts_event_login):
-        return self.dbpool.runInteraction(self._insert_events, ts_event_login)
+        return self.__dbpool.runInteraction(self._insert_events, ts_event_login)
 
     def _insert_events(self, transaction, ts_event_login):
         for ts, event, login in ts_event_login:
@@ -49,56 +54,59 @@ class UsersDatabase(object):
                                 "VALUES(?, ?, (SELECT id FROM clients WHERE login = ?))", (event, ts, login))
 
     def __get_client_id(self, login):
-        return self.dbpool.runQuery("SELECT id FROM clients WHERE login = ?", (login,))
+        return self.__dbpool.runQuery("SELECT id FROM clients WHERE login = ?", (login,))
 
     def get_password(self, login):
-        return self.dbpool.runQuery("SELECT password FROM clients WHERE login = ?", (login,))
+        return self.__dbpool.runQuery("SELECT password FROM clients WHERE login = ?", (login,))
 
     def get_client_events(self, login, ts):
-        return self.dbpool.runQuery("SELECT e.ts, e.event_description "
-                                    "FROM clients AS c LEFT OUTER JOIN events_log AS e ON c.id = e.client_events"
-                                    "WHERE (c.login = ? OR c.login = ?) and e.ts > ?"
-                                    "ORDER BY e.ts",
-                                    (login, self.__SERVER, ts))
+        return self.__dbpool.runQuery("SELECT e.ts, e.event_description "
+                                      "FROM clients AS c LEFT OUTER JOIN events_log AS e ON c.id = e.client_events"
+                                      "WHERE (c.login = ? OR c.login = ?) and e.ts > ?"
+                                      "ORDER BY e.ts",
+                                      (login, self.__SERVER, ts))
 
     def get_clients(self):
-        return self.dbpool.runQuery("SELECT * FROM clients")
+        return self.__dbpool.runQuery("SELECT * FROM clients")
 
 
     def finish(self):
-        self.dbpool.close()
+        self.__dbpool.close()
 
 
-def printResults(results):
-    print('Clients:')
-    for item in results:
-        print(item)
+if __name__ == '__main__':
+
+    def printResults(results):
+        print('Clients:')
+        for item in results:
+            print(item)
 
 
-def printError(results):
-    print(results)
+    def printError(results):
+        print(results)
 
 
-db = UsersDatabase(SQLITE3, DATABASE_NAME)
+    db = UsersDatabase(SQLITE3, DATABASE_NAME)
 
 
-def insert_clients_in_db():
-    clients_password = (('jd', '123'), ('ww', 'dsfsdgd'), ('qw', 'dfsd'), ('ty', '1reetrt3'))
-    db.insert_clients(clients_password).addErrback(printError)
+    def insert_clients_in_db():
+        clients_password = (('user', 'pass'), ('guest', 'qwerty'), ('God', 'godemode'), ('Timmy', 'timtim'))
+        db.insert_clients(clients_password).addErrback(printError)
 
 
-def show_db_content():
-    results = db.get_clients()
-    results.addCallback(printResults)
-    results.addErrback(printError)
+    def show_db_content():
+        results = db.get_clients()
+        results.addCallback(printResults)
+        results.addErrback(printError)
 
 
-def end():
-    print('FINISH')
-    db.finish()
-    reactor.stop()
+    def end():
+        print('FINISH')
+        db.finish()
+        reactor.stop()
 
-reactor.callLater(5, insert_clients_in_db)
-reactor.callLater(10, show_db_content)
-reactor.callLater(15, end)
-reactor.run()
+
+    reactor.callLater(5, insert_clients_in_db)
+    reactor.callLater(10, show_db_content)
+    reactor.callLater(15, end)
+    reactor.run()
