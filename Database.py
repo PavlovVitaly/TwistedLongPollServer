@@ -12,8 +12,9 @@ class UsersDatabase(object):
         self.__db_type = db_type
         self.__name_db = name_db
         self.__dbpool = adbapi.ConnectionPool(self.__db_type, self.__name_db, check_same_thread=False)
-        # todo: addErrback
-        # self.__create_tables().addCallback(lambda x: self.insert_clients(((self.__SERVER, self.__SERVER_PASSWORD),)))
+        d = self.__create_tables()
+        d.addCallback(lambda x: self.insert_clients(((self.__SERVER, self.__SERVER_PASSWORD),)))
+        d.addErrback(lambda x: None)
 
     @property
     def database_pool(self):
@@ -40,24 +41,16 @@ class UsersDatabase(object):
         for login, password in login_password:
             transaction.execute("INSERT INTO clients (login, password) VALUES(?, ?)", (login, password))
 
-    def insert_event(self, login, ts, event):
-        if self.__get_client_id(login):
-            self.__dbpool.runQuery("INSERT INTO events_log (ts, event_description, client_events) "
-                                   "VALUES(?, ?, (SELECT id FROM clients WHERE login = ?))", (event, ts, login))
+    def insert_events(self, clients):
+        return self.__dbpool.runInteraction(self.__insert_events, clients)
 
-    def insert_events(self, ts_event_login):
-        return self.__dbpool.runInteraction(self._insert_events, ts_event_login)
-
-    def _insert_events(self, transaction, ts_event_login):
-        for ts, event, login in ts_event_login:
+    def __insert_events(self, transaction, clients):
+        for ts, event, login in clients:
             transaction.execute("INSERT INTO events_log (ts, event_description, client_events) "
                                 "VALUES(?, ?, (SELECT id FROM clients WHERE login = ?))", (event, ts, login))
 
     def __get_client_id(self, login):
         return self.__dbpool.runQuery("SELECT id FROM clients WHERE login = ?", (login,))
-
-    def get_password(self, login):
-        return self.__dbpool.runQuery("SELECT password FROM clients WHERE login = ?", (login,))
 
     def get_client_events(self, login, ts):
         return self.__dbpool.runQuery("SELECT e.ts, e.event_description "
@@ -68,7 +61,6 @@ class UsersDatabase(object):
 
     def get_clients(self):
         return self.__dbpool.runQuery("SELECT * FROM clients")
-
 
     def finish(self):
         self.__dbpool.close()

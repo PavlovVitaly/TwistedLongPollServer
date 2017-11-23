@@ -9,6 +9,17 @@ class IProtocolAvatar(Interface):
 
 
 @implementer(IProtocolAvatar)
-class EchoAvatar(object):
+class ClientAvatar(object):
+    def __init__(self):
+        self.__client = None
+
+    @property
+    def client(self):
+        return self.__client
+
+    @client.setter
+    def client(self, cl):
+        self.__client = cl
+
     def logout(self):
         pass

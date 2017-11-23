@@ -48,7 +48,7 @@ class Dispatcher(protocol.Protocol):
         result_dict['key'] = str(next(password_generator(LENGTH_OF_PASSWORD)))
         result_dict['ts'] = '0'
         endpoints.serverFromString(reactor, "tcp:" + str(port)).listen(
-            LongPollConnectionFactory(result_dict.get('key'), result_dict.get('ts')))
+            LongPollConnectionFactory(self.__avatar, result_dict.get('key'), result_dict.get('ts')))
         self.transport.write(pickle.dumps(result_dict))
 
     def _ebLogin(self, failure):
