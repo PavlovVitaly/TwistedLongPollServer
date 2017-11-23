@@ -2,7 +2,7 @@ from zope.interface import Interface, implementer
 
 
 class IProtocolAvatar(Interface):
-    def logout():
+    def logout(self):
         """
         Clean up per-login resources allocated to this avatar.
         """
@@ -11,6 +11,7 @@ class IProtocolAvatar(Interface):
 @implementer(IProtocolAvatar)
 class ClientAvatar(object):
     def __init__(self):
+        super().__init__()
         self.__client = None
 
     @property

@@ -41,13 +41,15 @@ class UsersDatabase(object):
         for login, password in login_password:
             transaction.execute("INSERT INTO clients (login, password) VALUES(?, ?)", (login, password))
 
-    def insert_events(self, clients):
-        return self.__dbpool.runInteraction(self.__insert_events, clients)
+    def insert_clients_cash(self, clients):
+        return self.__dbpool.runInteraction(self.__insert_clients_cash, clients)
 
-    def __insert_events(self, transaction, clients):
-        for ts, event, login in clients:
-            transaction.execute("INSERT INTO events_log (ts, event_description, client_events) "
-                                "VALUES(?, ?, (SELECT id FROM clients WHERE login = ?))", (event, ts, login))
+    def __insert_clients_cash(self, transaction, clients):
+        for client in clients:
+            for event in client.events:
+                transaction.execute("INSERT INTO events_log (ts, event_description, client_events) "
+                                    "VALUES(?, ?, (SELECT id FROM clients WHERE login = ?))",
+                                    (event.description_of_event, event.timestamp, client.login))
 
     def __get_client_id(self, login):
         return self.__dbpool.runQuery("SELECT id FROM clients WHERE login = ?", (login,))
@@ -58,6 +60,9 @@ class UsersDatabase(object):
                                       "WHERE (c.login = ? OR c.login = ?) and e.ts > ?"
                                       "ORDER BY e.ts",
                                       (login, self.__SERVER, ts))
+
+    def get_all_logins(self):
+        return self.__dbpool.runQuery("SELECT login FROM clients")
 
     def get_clients(self):
         return self.__dbpool.runQuery("SELECT * FROM clients")
