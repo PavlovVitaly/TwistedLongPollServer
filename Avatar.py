@@ -14,6 +14,7 @@ class ClientAvatar(object):
         super().__init__()
         self.__client = None
         self.__server = None
+        self.__ts = None
 
     @property
     def client(self):
@@ -30,6 +31,14 @@ class ClientAvatar(object):
     @server.setter
     def server(self, sr):
         self.__server = sr
+
+    @property
+    def ts(self):
+        return self.__ts
+
+    @ts.setter
+    def ts(self, ts):
+        self.__ts = ts
 
     def logout(self):
         pass

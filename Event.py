@@ -10,6 +10,10 @@ class Event(object):
     def timestamp(self):
         return self.__timestamp
 
+    @timestamp.setter
+    def timestamp(self, ts):
+        self.__timestamp = ts
+
     @property
     def description_of_event(self):
         return self.__description_of_event

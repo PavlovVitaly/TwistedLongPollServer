@@ -35,7 +35,7 @@ def start_server(list_of_logins):
         generate_event(clients_cash)
 
     l = task.LoopingCall(looping_event_generator)
-    l.start(1.0)
+    l.start(0.1)
 
 
 d = db.get_all_logins()
