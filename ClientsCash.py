@@ -5,7 +5,7 @@ class ClientsCash(object):
     def __init__(self, list_of_logins):
         self.__list_of_clients = list()
         for login in list_of_logins:
-            self.__list_of_clients.append(Client(login))
+            self.__list_of_clients.append(Client(login[0]))
 
     def client(self, login):
         for client in self.__list_of_clients:

@@ -32,6 +32,7 @@ class Dispatcher(protocol.Protocol):
         self.__logout = None
         self.__login = None
         self.__clients_cash = clients_cash
+        self.__server = clients_cash.client('SERVER')
 
     def set_portal(self, portal):
         self.__portal = portal
@@ -43,6 +44,7 @@ class Dispatcher(protocol.Protocol):
         if not self.__avatar:
             data = unpack_request_to_dict(data)
             login, password = data.get('login'), data.get('password')
+            self.__login = login
             self.tryLogin(login, password)
 
     def tryLogin(self, username, password):
@@ -52,7 +54,8 @@ class Dispatcher(protocol.Protocol):
     def _cbLogin(self, interface_avatar_logout):
         _, self.__avatar, self.__logout = interface_avatar_logout
         response, port = self.__make_get_response()
-        self.__avatar.client = Client(self.__login)
+        self.__avatar.client = self.__clients_cash.client(self.__login)
+        self.__avatar.server = self.__server
         endpoints.serverFromString(reactor, "tcp:" + str(port)).listen(
             LongPollConnectionFactory(self.__avatar, response[1].get('key'), response[1].get('ts')))
         self.transport.write(pickle.dumps(response))

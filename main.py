@@ -1,11 +1,12 @@
 from twisted.cred import portal
-from twisted.internet import reactor, endpoints
+from twisted.internet import reactor, endpoints, task
 
 from ClientsCash import ClientsCash
 from Database import UsersDatabase
 from DbChecker import DBCredentialsChecker
 from Dispatcher import DispatcherFactory
 from Realm import Realm
+from EventGenerator import generate_event
 
 DISPATCHER_IP = 'http://127.0.0.1'
 DISPATCHER_PORT = 8000
@@ -22,21 +23,25 @@ realm = Realm()
 myPortal = portal.Portal(realm)
 db = UsersDatabase(SQLITE3, DATABASE_NAME)
 dbpool = db.database_pool
-list_of_logins = None
 
 
-# todo: list_of_logins isn't connected.
-def fill_list_of_logins(x):
-    list_of_logins = x
+def start_server(list_of_logins):
+    clients_cash = ClientsCash(list_of_logins)
+    checker = DBCredentialsChecker(dbpool.runQuery, query="SELECT login, password FROM clients WHERE login = ?")
+    myPortal.registerChecker(checker)
+    endpoints.serverFromString(reactor, "tcp:" + str(DISPATCHER_PORT)).listen(DispatcherFactory(myPortal, clients_cash))
+
+    def looping_event_generator():
+        generate_event(clients_cash)
+
+    l = task.LoopingCall(looping_event_generator)
+    l.start(1.0)
 
 
-db.get_all_logins().addCallback(fill_list_of_logins)
-while not list_of_logins:
-    pass
-clients_cash = ClientsCash(list_of_logins)
-checker = DBCredentialsChecker(dbpool.runQuery, query="SELECT login, password FROM clients WHERE login = ?")
-myPortal.registerChecker(checker)
-endpoints.serverFromString(reactor, "tcp:" + str(DISPATCHER_PORT)).listen(DispatcherFactory(myPortal))
+d = db.get_all_logins()
+d.addCallback(start_server)
+d.addErrback(print)
+
 reactor.run()
 
 # from datetime import datetime
