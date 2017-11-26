@@ -1,5 +1,5 @@
 from twisted.cred import portal
-from twisted.internet import reactor, endpoints, task
+from twisted.internet import reactor, endpoints, task, threads
 
 from ClientsCash import ClientsCash
 from Database import UsersDatabase
@@ -7,6 +7,7 @@ from DbChecker import DBCredentialsChecker
 from Dispatcher import DispatcherFactory
 from Realm import Realm
 from EventGenerator import generate_event
+from Event import Event
 
 DISPATCHER_IP = 'http://127.0.0.1'
 DISPATCHER_PORT = 8000
@@ -35,7 +36,16 @@ def start_server(list_of_logins):
         generate_event(clients_cash)
 
     l = task.LoopingCall(looping_event_generator)
-    l.start(0.1)
+    l.start(1.0)
+
+    server = clients_cash.client('SERVER')
+
+    def generate_server_event():
+        while True:
+            msg = input()
+            server.add_event(Event('SERVER: ' + msg))
+
+    threads.deferToThread(generate_server_event)
 
 d = db.get_all_logins()
 d.addCallback(start_server)
