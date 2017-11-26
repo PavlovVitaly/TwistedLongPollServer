@@ -29,14 +29,13 @@ def start_server(list_of_logins):
     clients_cash = ClientsCash(list_of_logins)
     checker = DBCredentialsChecker(dbpool.runQuery, query="SELECT login, password FROM clients WHERE login = ?")
     myPortal.registerChecker(checker)
-    endpoints.serverFromString(reactor, "tcp:" + str(DISPATCHER_PORT)).listen(DispatcherFactory(myPortal, clients_cash))
+    endpoints.serverFromString(reactor, "tcp:" + str(DISPATCHER_PORT)).listen(DispatcherFactory(myPortal, clients_cash, db))
 
     def looping_event_generator():
         generate_event(clients_cash)
 
     l = task.LoopingCall(looping_event_generator)
     l.start(0.1)
-
 
 d = db.get_all_logins()
 d.addCallback(start_server)

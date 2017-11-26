@@ -13,6 +13,9 @@ class ClientsCash(object):
                 return client
         return None
 
+    def add_client(self, client):
+        self.__list_of_clients.append(client)
+
     def __iter__(self):
         return iter(self.__list_of_clients)
 
