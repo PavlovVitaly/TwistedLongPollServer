@@ -58,6 +58,7 @@ class LongPollConnection(protocol.Protocol):
         self.__client_avatar.server.pop_callback_for_add_event(self._server_callback_id)
         self._client_callback_id = None
         self._server_callback_id = None
+        self.transport.loseConnection()
 
 
 class LongPollConnectionFactory(protocol.Factory):
