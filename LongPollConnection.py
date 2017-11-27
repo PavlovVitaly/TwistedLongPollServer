@@ -56,6 +56,8 @@ class LongPollConnection(protocol.Protocol):
     def connectionLost(self, reason):
         self.__client_avatar.client.pop_callback_for_add_event(self._client_callback_id)
         self.__client_avatar.server.pop_callback_for_add_event(self._server_callback_id)
+        self._client_callback_id = None
+        self._server_callback_id = None
 
 
 class LongPollConnectionFactory(protocol.Factory):

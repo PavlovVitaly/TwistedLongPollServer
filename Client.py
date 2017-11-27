@@ -1,5 +1,6 @@
-from Event import Event
 from datetime import datetime
+
+from Event import Event
 
 
 class Client(object):
@@ -21,7 +22,8 @@ class Client(object):
         return self.__add_event_callback.index(callback)
 
     def pop_callback_for_add_event(self, id):
-        self.__add_event_callback.pop(id)
+        if self.__add_event_callback[id]:
+            self.__add_event_callback.pop(id)
 
     def add_event(self, event):
         self.__events.append(event)
