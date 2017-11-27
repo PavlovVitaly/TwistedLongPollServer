@@ -5,15 +5,17 @@ from ClientsCash import ClientsCash
 from Database import UsersDatabase
 from DbChecker import DBCredentialsChecker
 from Dispatcher import DispatcherFactory
-from Realm import Realm
-from EventGenerator import generate_event
 from Event import Event
+from EventGenerator import generate_event
+from Realm import Realm
 
 DISPATCHER_IP = 'http://127.0.0.1'
 DISPATCHER_PORT = 8000
 DISPATCHER_ADDRESS = DISPATCHER_IP + ':' + str(DISPATCHER_PORT)
 
 LAST_PORT = 65000
+
+MAX_NUMBERS_PORTS = LAST_PORT - DISPATCHER_PORT
 
 LENGTH_OF_PASSWORD = 15
 
@@ -51,6 +53,7 @@ d = db.get_all_logins()
 d.addCallback(start_server)
 d.addErrback(print)
 
+reactor.suggestThreadPoolSize(MAX_NUMBERS_PORTS)
 reactor.run()
 
 # from datetime import datetime
