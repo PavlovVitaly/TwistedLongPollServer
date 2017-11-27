@@ -14,6 +14,8 @@ class LongPollConnection(protocol.Protocol):
     def __init__(self, client_avatar, long_poll_get):
         self.__client_avatar = client_avatar
         self.__long_poll_get = long_poll_get
+        self._client_callback_id = None
+        self._server_callback_id = None
 
     def dataReceived(self, data):
         request = pickle.loads(data)
@@ -21,8 +23,8 @@ class LongPollConnection(protocol.Protocol):
             self.transport.loseConnection()
             return
         self.__client_avatar.ts = request.get('ts')
-        self.__client_avatar.client.add_callback_for_add_event(self.__transmit_event)
-        self.__client_avatar.server.add_callback_for_add_event(self.__transmit_event)
+        self._client_callback_id = self.__client_avatar.client.add_callback_for_add_event(self.__transmit_event)
+        self._server_callback_id = self.__client_avatar.server.add_callback_for_add_event(self.__transmit_event)
         self.__transmit_cashed_events()
 
     def __transmit_event(self, event):
@@ -50,6 +52,10 @@ class LongPollConnection(protocol.Protocol):
         msg.append(CASHED_EVENTS_MSG_HEAD)
         msg.append(events)
         return pickle.dumps(msg)
+
+    def connectionLost(self, reason):
+        self.__client_avatar.client.pop_callback_for_add_event(self._client_callback_id)
+        self.__client_avatar.server.pop_callback_for_add_event(self._server_callback_id)
 
 
 class LongPollConnectionFactory(protocol.Factory):
